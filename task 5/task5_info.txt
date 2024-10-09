@@ -1,0 +1,7 @@
+GET
+Create an API for pie chart Find unique categories and number of items from that
+category for the selected month regardless of the year.
+For example :
+- X category : 20 (items)
+- Y category : 5 (items)
+- Z category : 3 (items)

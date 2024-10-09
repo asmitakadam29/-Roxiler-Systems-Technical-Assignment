@@ -1,0 +1,5 @@
+GET
+Create an API for statistics
+- Total sale amount of selected month
+- Total number of sold items of selected month
+- Total number of not sold items of selected month

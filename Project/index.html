@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transactions Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .chart-container {
+      width: 80%;
+      margin: 20px 0;
+    }
+    table {
+      width: 80%;
+      margin: 20px 0;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .stats {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    .stat-box {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin: 0 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Transactions Dashboard</h1>
+  <select id="month-select">
+    <option value="1">January</option>
+    <option value="2">February</option>
+    <option value="3" selected>March</option>
+    <option value="4">April</option>
+    <option value="5">May</option>
+    <option value="6">June</option>
+    <option value="7">July</option>
+    <option value="8">August</option>
+    <option value="9">September</option>
+    <option value="10">October</option>
+    <option value="11">November</option>
+    <option value="12">December</option>
+  </select>
+  <input type="text" id="search" placeholder="Search transactions...">
+  
+  <div class="stats">
+    <div class="stat-box" id="total-sales">Total Sales: $0</div>
+    <div class="stat-box" id="total-sold-items">Total Sold Items: 0</div>
+    <div class="stat-box" id="total-not-sold-items">Total Not Sold Items: 0</div>
+  </div>
+
+  <table id="transactions-table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Description</th>
+        <th>Price</th>
+        <th>Category</th>
+        <th>Date of Sale</th>
+      </tr>
+    </thead>
+    <tbody id="transactions-body"></tbody>
+  </table>
+
+  <div class="chart-container">
+    <canvas id="bar-chart"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <canvas id="pie-chart"></canvas>
+  </div>
+</div>
+
+<script>
+  const monthSelect = document.getElementById('month-select');
+  const searchInput = document.getElementById('search');
+  const transactionsBody = document.getElementById('transactions-body');
+  const totalSalesBox = document.getElementById('total-sales');
+  const totalSoldItemsBox = document.getElementById('total-sold-items');
+  const totalNotSoldItemsBox = document.getElementById('total-not-sold-items');
+
+  const barChartCtx = document.getElementById('bar-chart').getContext('2d');
+  const pieChartCtx = document.getElementById('pie-chart').getContext('2d');
+
+  async function fetchStatistics(month) {
+    const response = await fetch(`http://localhost:3000/api/statistics/${month}`);
+    return response.json();
+  }
+
+  async function fetchTransactions(month) {
+    const response = await fetch(`http://localhost:3000/api/transactions/${month}`);
+    return response.json();
+  }
+
+  async function fetchBarChartData(month) {
+    const response = await fetch(`http://localhost:3000/api/bar-chart/${month}`);
+    return response.json();
+  }
+
+  async function fetchPieChartData(month) {
+    const response = await fetch(`http://localhost:3000/api/pie-chart/${month}`);
+    return response.json();
+  }
+
+  async function updateDashboard() {
+    const month = monthSelect.value;
+
+    try {
+      // Fetch statistics
+      const statistics = await fetchStatistics(month);
+      totalSalesBox.textContent = `Total Sales: $${statistics.totalSales}`;
+      totalSoldItemsBox.textContent = `Total Sold Items: ${statistics.totalSoldItems}`;
+      totalNotSoldItemsBox.textContent = `Total Not Sold Items: ${statistics.totalNotSoldItems}`;
+
+      // Fetch transactions
+      const transactions = await fetchTransactions(month);
+      transactionsBody.innerHTML = ''; // Clear the table
+      transactions.forEach(transaction => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${transaction.title}</td>
+          <td>${transaction.description}</td>
+          <td>$${transaction.price}</td>
+          <td>${transaction.category}</td>
+          <td>${new Date(transaction.dateOfSale).toLocaleDateString()}</td>
+        `;
+        transactionsBody.appendChild(row);
+      });
+
+      // Fetch and display bar chart data
+      const barChartData = await fetchBarChartData(month);
+      new Chart(barChartCtx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(barChartData),
+          datasets: [{
+            label: 'Number of Transactions',
+            data: Object.values(barChartData),
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+
+      // Fetch and display pie chart data
+      const pieChartData = await fetchPieChartData(month);
+      new Chart(pieChartCtx, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(pieChartData),
+          datasets: [{
+            label: 'Category Distribution',
+            data: Object.values(pieChartData),
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.2)',
+              'rgba(54, 162, 235, 0.2)',
+              'rgba(255, 206, 86, 0.2)',
+              'rgba(75, 192, 192, 0.2)',
+              'rgba(153, 102, 255, 0.2)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'top',
+            },
+            title: {
+              display: true,
+              text: 'Category Distribution'
+            }
+          }
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  }
+
+  // Initial call to update the dashboard with default month
+  updateDashboard();
+
+  // Event listeners for updates
+  monthSelect.addEventListener('change', updateDashboard);
+  searchInput.addEventListener('input', () => {
+    const filter = searchInput.value.toLowerCase();
+    const rows = transactionsBody.getElementsByTagName('tr');
+    Array.from(rows).forEach(row => {
+      const title = row.cells[0].textContent.toLowerCase();
+      row.style.display = title.includes(filter) ? '' : 'none';
+    });
+  });
+</script>
+</body>
+</html>
